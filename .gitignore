@@ -1,4 +1,6 @@
 *.egg*
 build
+dist
 *.c
 *.html
+MANIFEST
