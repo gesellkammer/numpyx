@@ -31,7 +31,7 @@ setup(
     # ext_modules = cythonize('numpyx.pyx'),  # accepts a glob pattern
 
     # metadata
-    version          = "0.2.1",
+    version          = "0.3.0",
     url              = 'https://github.com/gesellkammer/numpyx',
     download_url     = 'https://github.com/gesellkammer/numpyx',
     author           = 'eduardo moguillansky',
