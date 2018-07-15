@@ -4,9 +4,9 @@ numpyx. Some accelerated funcs for numpy
 """
 import sys
 import os
-# from distutils.core import setup
 from setuptools import setup, Extension
-# from Cython.Build import cythonize
+import numpy
+
 
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload -r pypi')
@@ -25,14 +25,15 @@ setup(
         Extension(
             'numpyx',
             sources=['numpyx.pyx'],
+            include_dirs=[numpy.get_include()]
         ),
     ],
     # ext_modules = cythonize('numpyx.pyx'),  # accepts a glob pattern
 
     # metadata
-    version          = "0.1.5",
+    version          = "0.2.1",
     url              = 'https://github.com/gesellkammer/numpyx',
-    download_url     = 'https://github.com/gesellkammer/numpyx', 
+    download_url     = 'https://github.com/gesellkammer/numpyx',
     author           = 'eduardo moguillansky',
     author_email     = 'eduardo.moguillansky@gmail.com',
     maintainer       = '',

@@ -3,4 +3,5 @@ build
 dist
 *.c
 *.html
+*.so
 MANIFEST

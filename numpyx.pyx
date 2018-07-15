@@ -8,7 +8,6 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-# from numpy.math cimport INFINITY
 from libc.math cimport INFINITY
 
 
@@ -74,25 +73,59 @@ cdef inline void _putrow(double[:, ::1] out, int outidx, double[:, :] table, int
         out[outidx, i-1] = table[tableidx, i]
 
 
-cpdef int searchsorted1(double[:] xs, double x) nogil:    
+def searchsorted1(a, v, out=None):
     """
     Like searchsorted, but for 1d double arrays
 
-    xs: data
-    x: value to "insert" in xs
+    a: array to be searched
+    v: value/values to "insert" in a
+    out: if v is a numpy array, an array `out` can be passed
+         which will hold the result. 
     """
+    if isinstance(v, np.ndarray):
+        if out is None:
+            out = np.empty((v.shape[0],), dtype="long")
+        _searchsorted1x(a, v, out)
+        return out
+    elif isinstance(v, float):
+        return _searchsorted1(a, v)
+    else:
+        raise TypeError(f"v: expected numpy array or float, got {type(v)}")
+
+
+cdef int _searchsorted1(double[:] A, double x) nogil: 
     cdef:
         int imin = 0
-        int imax = xs.shape[0]
+        int imax = A.shape[0]
         int imid
     while imin < imax:
         imid = imin + ((imax - imin) >> 2)
-        if xs[imid] < x:
+        if A[imid] < x:
             imin = imid + 1
         else:
             imax = imid
     return imin
 
+
+cdef void _searchsorted1x(double[:] A, double[:] V, long[:] out) nogil:
+    cdef:
+        int imin = 0
+        int imaxidx = A.shape[0]
+        int imid
+        int i
+        double x
+    for i in range(imaxidx):
+        imin = 0 
+        imax = imaxidx
+        x = V[i]
+        while imin < imax:
+            imid = imin + ((imax - imin) >> 2)
+            if A[imid] < x:
+                imin = imin + 1
+            else:
+                imax = imid
+        out[i] = imin 
+    
 
 cdef int _searchsorted2(double[:, :] xs, int col, double x) nogil:    
     cdef:
@@ -114,9 +147,9 @@ def searchsorted2(xs, col, x):
     Like searchsorted, but for 2d arrays, where only 
     one column is used for searching
 
-    xs: data
+    xs : data
     col: indicates which column to use to compare
-    x: value to "insert" in xs
+    x  : value to "insert" in xs
     """
     return _searchsorted2(xs, col, x)
 
@@ -187,7 +220,7 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
                 _putrow(out, i, table, table_numrows - 1)
             else:
                 # idx = _searchsorted2(table, 0, x) - 1
-                idx = searchsorted1(ts, x) - 1
+                idx = _searchsorted1(ts, x) - 1
                 last_t0 = table[idx, 0]
                 last_t1 = table[idx+1, 0]
                 last_diff = last_t1 - last_t0
@@ -200,3 +233,139 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
     if error == 1:
         raise RuntimeError("Values along the 0 axis should be sorted")
     return np.asarray(out)
+
+
+def nearestitem(double[:] A not None, double[:] V not None, out=None):
+    """
+    For each value in V, return the element in A which is nearest
+    to it.
+    """
+    cdef long[:] Idxs = np.searchsorted(A, V)
+    cdef int i, idx
+    cdef double a0, a1, v
+    cdef double[:] O 
+    cdef int Vsize = V.shape[0]
+    cdef int maxidx = A.shape[0] - 1
+    if out is not None:
+        O = out
+    else:
+        O = np.empty((Vsize,), dtype=np.double)
+    for i in range(Vsize):
+        idx = Idxs[i]
+        if idx > maxidx:
+            idx = maxidx
+        a1 = A[idx]
+        a0 = A[idx - 1] if idx >= 1 else a1
+        v = V[i]
+        if v - a0 < a1 - v:
+            O[i] = a0
+        else:
+            O[i] = a1
+    return np.asarray(O)
+
+
+def weightedavg(double[:] Y not None, double [:] X not None, double[:] weights not None):
+    if Y.is_c_contig() and X.is_c_contig() and weights.is_c_contig():
+        return _weightedavg_contiguous(&Y[0], &X[0], &weights[0], len(Y))
+    return _weightedavg(Y, X, weights)
+
+
+cdef double _weightedavg(double[:] Y, double[:] X, double[:] weights):
+    cdef int i
+    cdef double x0, x1, y0, y1, dx, yavg, wavg, w0, w1
+    cdef double accum = 0
+    cdef double accumw = 0
+    x0 = X[0]
+    y0 = Y[0]
+    w0 = weights[0]
+    for i in range(1, X.shape[0]):
+        x1 = X[i]
+        y1 = Y[i]
+        w1 = weights[i]
+        dx = x1 - x0
+        yavg = (y0 + y1) * 0.5
+        wavg = (w0 + w1) * 0.5 * dx
+        accum += yavg * wavg
+        accumw += wavg
+        x0 = x1 
+        y0 = y1
+        w0 = w1
+    return accum / accumw
+
+
+cdef double _weightedavg_contiguous(double* Y, double* X, double* weights, int size):
+    cdef int i
+    cdef double x0, x1, y0, y1, dx, yavg, wavg, w0, w1
+    cdef double accum = 0
+    cdef double accumw = 0
+    x0 = X[0]
+    y0 = Y[0]
+    w0 = weights[0]
+    for i in range(1, size):
+        x1 = X[i]
+        y1 = Y[i]
+        w1 = weights[i]
+        dx = x1 - x0
+        yavg = (y0 + y1) * 0.5
+        wavg = (w0 + w1) * 0.5 * dx
+        accum += yavg * wavg
+        accumw += wavg
+        x0 = x1 
+        y0 = y1
+        w0 = w1
+    return accum / accumw
+
+
+def allequal(double[:] A not None, double[:] B not None):
+    cdef int i
+    for i in range(A.shape[0]):
+        if A[i] != B[i]:
+            return False
+    return True
+
+
+def trapz(double[:] Y not None, double[:] X not None):
+    if Y.is_c_contig() and X.is_c_contig():
+        return _trapz_contiguous(&Y[0], &X[0], len(Y))
+    return _trapz(Y, X)
+
+
+cdef double _trapz(double[:] Y, double[:] X):
+    cdef int i
+    cdef double x0, x1, y0, y1, area, dx
+    x0 = X[0]
+    y0 = Y[0]
+    cdef double total = 0
+    for i in range(1, X.shape[0]):
+        x1 = X[i]
+        y1 = Y[i]
+        dx = x1 - x0
+        area = (y0 + y1) * 0.5 * dx
+        total += area
+        x0 = x1 
+        y0 = y1
+    return total
+
+
+cdef double _trapz_contiguous(double *Y, double *X, int size):
+    cdef int i
+    cdef double x0, x1, y0, y1, area, dx
+    x0 = X[0]
+    y0 = Y[0]
+    cdef double total = 0
+    for i in range(1, size):
+        x1 = X[i]
+        y1 = Y[i]
+        dx = x1 - x0
+        area = (y0 + y1) * 0.5 * dx
+        total += area
+        x0 = x1 
+        y0 = y1
+    return total
+# def nearestidx(double[:] A, double[:] V, out=None):
+#    """
+#    For each value in V, return the index of the element in A which
+#    is rearest to it. 
+#    """
+    
+
