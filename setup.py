@@ -2,17 +2,9 @@
 numpyx. Some accelerated funcs for numpy
 
 """
-import sys
-import os
 from setuptools import setup, Extension
 
-
-if sys.argv[-1] == 'publish':
-    os.system('python setup.py sdist upload -r pypi')
-    sys.exit()
-elif sys.argv[-1] == 'testpublish':
-    os.system('python setup.py sdif upload -r pypitest')
-    sys.exit()
+VERSION = "0.3.2"
 
 class numpy_get_include(str):
     def __str__(self):
@@ -32,7 +24,7 @@ setup(
         )
     ],
 
-    version          = "0.3.1",
+    version          = VERSION,
     url              = 'https://github.com/gesellkammer/numpyx',
     download_url     = 'https://github.com/gesellkammer/numpyx',
     author           = 'eduardo moguillansky',
