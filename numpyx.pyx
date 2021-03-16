@@ -11,6 +11,89 @@ cimport cython
 from libc.math cimport INFINITY
 
 
+def any_less_than(double[:] a not None, double scalar):
+    """
+    Is any value of a < scalar?
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef double x
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] < scalar:
+                out = 1
+                break
+    return bool(out)
+
+    
+def any_less_or_equal_than(double[:] a not None, double scalar):
+    """
+    Is any value of a <= scalar?
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef double x
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] <= scalar:
+                out = 1
+                break
+    return bool(out)
+
+
+def any_greater_than(double[:] a not None, double scalar):
+    """
+    Is any value of a > scalar?
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef double x
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] > scalar:
+                out = 1
+                break
+    return bool(out)
+
+
+def any_greater_or_equal_than(double[:] a not None, double scalar):
+    """
+    Is any value of a >= scalar?
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef double x
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] >= scalar:
+                out = 1
+                break
+    return bool(out)
+
+
+def any_equal_to(double[:] a not None, double scalar):
+    """
+    Is any value of a == scalar?
+
+    To query if any value of a is different from a scalar just
+    use any_less_than
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef double x
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] == scalar:
+                out = 1
+                break
+    return bool(out)
+
+
 def minmax1d(double[:] a not None):
     """
     Calculate min. and max. of a double 1D-array in one go
@@ -30,9 +113,14 @@ def minmax1d(double[:] a not None):
     return x0, x1
 
 
-def array_is_sorted(double [:]xs, int allowduplicates=0):
+def array_is_sorted(double [:]xs, int allowduplicates=1):
     """
-    xs: a (numpy) array of double
+    Is the array sorted?
+    
+    Args:
+        xs: a numpy float array
+        allowduplicates: if true (default), duplicate values are still
+            considered sorted
     """
     cdef double x0 = -INFINITY
     cdef double x
@@ -77,10 +165,11 @@ def searchsorted1(a, v, out=None):
     """
     Like searchsorted, but for 1d double arrays
 
-    a: array to be searched
-    v: value/values to "insert" in a
-    out: if v is a numpy array, an array `out` can be passed
-         which will hold the result. 
+    Args:
+        a: array to be searched
+        v: value/values to "insert" in a
+        out: if v is a numpy array, an array `out` can be passed
+             which will hold the result. 
     """
     if isinstance(v, np.ndarray):
         if out is None:
@@ -99,7 +188,7 @@ cdef int _searchsorted1(double[:] A, double x) nogil:
         int imax = A.shape[0]
         int imid
     while imin < imax:
-        imid = imin + ((imax - imin) >> 2)
+        imid = imin + ((imax - imin) / 2)
         if A[imid] < x:
             imin = imid + 1
         else:
@@ -119,7 +208,7 @@ cdef void _searchsorted1x(double[:] A, double[:] V, long[:] out) nogil:
         imax = imaxidx
         x = V[i]
         while imin < imax:
-            imid = imin + ((imax - imin) >> 2)
+            imid = imin + ((imax - imin) / 2)
             if A[imid] < x:
                 imin = imin + 1
             else:
@@ -134,7 +223,7 @@ cdef int _searchsorted2(double[:, :] xs, int col, double x) nogil:
         int imid
     with nogil:
         while imin < imax:
-            imid = imin + ((imax - imin) >> 2)
+            imid = imin + ((imax - imin) / 2)
             if xs[imid, col] < x:
                 imin = imid + 1
             else:
@@ -147,38 +236,55 @@ def searchsorted2(xs, col, x):
     Like searchsorted, but for 2d arrays, where only 
     one column is used for searching
 
-    xs : data
-    col: indicates which column to use to compare
-    x  : value to "insert" in xs
+    Args:
+        xs: data
+        col: indicates which column to use to compare
+        x : value to "insert" in xs
+
+    Returns:
+        the index where x would be inserted to keep xs sorted
     """
     return _searchsorted2(xs, col, x)
 
 
 def table_interpol_linear(double[:, ::1] table, double[:] xs):
     """
-    table: a 2D array with columns (x, ...)
-    xs: the points to interpolate `table` at, corresponding to the 
-        first column of the array
+    Given a 2D-array (`table`) with multidimensional Y measurements sampled
+    at possibly irregular X, `table_interpol_linear` will interpolate between
+    adjacent rows of `table` for each value of `xs`. `xs` contains the x values at which
+    to interpolate rows of `table`
+    
+    Args:
+        table: a 2D array where each row has the form [x_i, a, b, c, ...]. The first
+            value of the row is the x coordinate (or time-stamp) and the rest of the
+            row contains multiple measurements corresponding to this x.
+        xs: a 1D array with x values to query the table. For each value in `xs`,
+            a whole row of values will be generated from adjacent rows in `table`
 
-    Given an array A:
+    Returns:
+        an array with the interpolated rows. The result will have as many rows as `xs`,
+        and one column less than the columns of `table`
+        
+    Example
+    ~~~~~~~
 
-    [[0, 0, 1, 2, 3,   4]
-     [1, 0, 2, 4, 6,   8]
-     [2, 0, 4, 8, 12, 16]
-    ]
-
-    table_interpol_linear(A, [0.5, 1.5]) would result in
-
-    [[0.5, 0, 1.5, 3, 4.5, 6 ]
-     [1.5, 0, 3,   6, 9,   12]]
+    
+        >>> A = np.array([[0, 0, 1, 2, 3,   4]
+        ...               [1, 0, 2, 4, 6,   8]
+        ...               [2, 0, 4, 8, 12, 16]], dtype=float)
+        >>> xs = np.array([0.5, 1.5, 2.2])
+        >>> table_interpol_linear(A, xs)
+        array([[0.5, 0., 1.5, 3., 4.5, 6. ]
+               [1.5, 0., 3.,  6., 9.,  12.]
+               [2.,  0., 4.,  8., 12., 16.]])
 
     NB: the resampled table has no `x` column, which would be a 
         copy of the sampling points `xs`, and thus has one column
         less than the table. To build a table with the given xs as
         first column, do:
 
-        resampled = table_interpol_linear(table, xs)
-        table2 = np.hstack((xs.reshape(xs.shape[0], 1), resampled))
+        >>> resampled = table_interpol_linear(table, xs)
+        >>> table2 = np.hstack((xs.reshape(xs.shape[0], 1), resampled))
     """
     cdef:
         double[:, ::1] out = np.empty((xs.shape[0], table.shape[1] - 1))
@@ -235,10 +341,53 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
     return np.asarray(out)
 
 
+def nearestidx(double[:] A not None, double x, bint sorted=False):
+    """
+    Return the index of the element in A which is nearest to x
+    """
+    cdef int size = A.shape[0]
+    cdef double smallest = INFINITY
+    cdef int idx = 0
+    cdef double diff
+    if not sorted:
+        for i in range(size):
+            diff = abs(A[i] - x)
+            if diff == 0:
+                return i
+            if diff < smallest:
+                smallest = diff
+                idx = i
+    else:
+        idx = _searchsorted1(A, x)
+        if abs(A[idx] - x) < abs(A[idx+1] -x):
+            return idx
+        return idx + 1 
+    return idx
+
+
 def nearestitem(double[:] A not None, double[:] V not None, out=None):
     """
     For each value in V, return the element in A which is nearest
     to it.
+
+    Args:
+        A: a 1D double array. The values to choose from
+        V: a 1D double array. The values to snap to A
+        out: if given, the values selected from A will be put here. It can't
+            be A itself, but could be V
+
+    Returns:
+        an array of the same shape as V with values of A, each of each is
+        the nearest value of A to each value of B
+
+    Example
+    ~~~~~~~
+
+    >>> import numpy as np
+    >>> A = np.array([1., 2., 3., 4., 5.])
+    >>> V = np.array([0.3, 1.1, 3.4, 10.8])
+    >>> nearestitem(A, V)
+    array([1., 1., 3., 5.])
     """
     cdef long[:] Idxs = np.searchsorted(A, V)
     cdef int i, idx
@@ -265,6 +414,30 @@ def nearestitem(double[:] A not None, double[:] V not None, out=None):
 
 
 def weightedavg(double[:] Y not None, double [:] X not None, double[:] weights not None):
+    """
+    Weighted average of a time-series
+
+    Args:
+        Y: values
+        X: times corresponding to the Y values
+        weights: weight for each value
+
+    Returns:
+        the weighted average (a scalar)
+
+    Example
+    ~~~~~~~
+
+    >>> # Given a time-series of the fundamental frequency of a sound together
+    >>> # with its amplitude, calculate an average using the amplitude as weight
+    >>> import numpy as np
+    >>> freqs = np.array([444., 442., 443.])
+    >>> times = np.array([0.,   1.,   2.])
+    >>> amps  = np.array([0.1,  0.3,  0.2])
+    >>> weightedavg(freqs, times, amps)
+    442.6667
+    
+    """
     if Y.is_c_contig() and X.is_c_contig() and weights.is_c_contig():
         return _weightedavg_contiguous(&Y[0], &X[0], &weights[0], len(Y))
     return _weightedavg(Y, X, weights)
@@ -317,6 +490,10 @@ cdef double _weightedavg_contiguous(double* Y, double* X, double* weights, int s
 
 
 def allequal(double[:] A not None, double[:] B not None):
+    """
+    Check if all elements in A are equal to its corresponding element in B,
+    exit early if any inequality is found.
+    """
     cdef int i
     for i in range(A.shape[0]):
         if A[i] != B[i]:
@@ -325,6 +502,9 @@ def allequal(double[:] A not None, double[:] B not None):
 
 
 def trapz(double[:] Y not None, double[:] X not None):
+    """
+    A trapz integration routinge optimized for doubles
+    """
     if Y.is_c_contig() and X.is_c_contig():
         return _trapz_contiguous(&Y[0], &X[0], len(Y))
     return _trapz(Y, X)
@@ -362,10 +542,6 @@ cdef double _trapz_contiguous(double *Y, double *X, int size):
         x0 = x1 
         y0 = y1
     return total
-# def nearestidx(double[:] A, double[:] V, out=None):
-#    """
-#    For each value in V, return the index of the element in A which
-#    is rearest to it. 
-#    """
+    
     
 
