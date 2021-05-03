@@ -6,3 +6,4 @@ dist
 *.so
 MANIFEST
 wheelhouse
+site
