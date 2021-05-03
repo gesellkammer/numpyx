@@ -570,7 +570,7 @@ cdef double _weightedavg_contiguous(double* Y, double* X, double* weights, int s
     return accum / accumw
 
 
-def allequal(double[:] A not None, double[:] B not None):
+def allequal(double[:] A not None, double[:] B not None, float tolerance=0.):
     """
     Check if all elements in A == to its corresponding element in B
 
@@ -579,17 +579,25 @@ def allequal(double[:] A not None, double[:] B not None):
     Args:
         A (np.ndarray): a 1D double array
         B (np.ndarray): a 1D double array
-
+        tolerance (float): The tolerance to considere two values equal
+        
     Returns:
         (bool) True if all items in A are equal to their corresponding items in B
     """
     cdef int i
     cdef int out = 1
-    with nogil:
-        for i in range(A.shape[0]):
-            if A[i] != B[i]:
-                out = 0
-                break
+    if tolerance == 0:
+        with nogil:
+            for i in range(A.shape[0]):
+                if A[i] != B[i]:
+                    out = 0
+                    break
+    else:
+        with nogil:
+            for i in range(A.shape[0]):
+                if fabs(A[i] - B[i]) < tolerance:
+                    out = 0
+                    break
     return bool(out)
 
 
