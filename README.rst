@@ -1,5 +1,18 @@
 A small package with fast numpy routines written in cython
 
+Documentation
+-------------
+
+https://numpyx.readthedocs.io
+
+Installation
+------------
+
+    pip install numpyx
+
+-----
+
+
 Functions in this package
 -------------------------
 
