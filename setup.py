@@ -16,8 +16,9 @@ with open(os.path.join(thisdir, 'README.rst')) as f:
 setup(
     name = "numpyx",
     python_requires=">=3.8",
-    setup_requires=['cython', 'numpy'],
-    install_requires = ["numpy"],
+    setup_requires=['cython', 
+                    'numpy>=1.22'],
+    install_requires = ["numpy>=1.22"],
     ext_modules=[
         Extension(
             'numpyx',
