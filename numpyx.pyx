@@ -1,3 +1,4 @@
+#cython: language_level=3
 #cython: binding=True
 #cython: embedsignature=True
 #cython: infer_types=True
@@ -10,6 +11,7 @@ import numpy as np
 cimport numpy as np
 cimport cython
 from libc.math cimport INFINITY, fabs
+from libc cimport stdint
 
 
 def any_less_than(double[:] a not None, double scalar):
@@ -421,6 +423,10 @@ def nearestidx(double[:] A not None, double x, bint sorted=False):
         (int) The index in A whose element is closest to x
     """
     cdef int size = A.shape[0]
+    if size == 0:
+        raise ValueError("array is empty")
+    elif size == 1:
+        return 0
     cdef double smallest = INFINITY
     cdef int idx = 0
     cdef double diff
@@ -432,13 +438,16 @@ def nearestidx(double[:] A not None, double x, bint sorted=False):
             if diff < smallest:
                 smallest = diff
                 idx = i
+        return idx
     else:
         idx = _searchsorted1(A, x)
+        if idx >= size - 1:
+            return size - 1
+
         if abs(A[idx] - x) < abs(A[idx+1] -x):
             return idx
-        return idx + 1 
-    return idx
-
+        return idx + 1
+    
 
 def nearestitem(double[:] A not None, double[:] V not None, out=None):
     """
@@ -604,7 +613,7 @@ def allequal(double[:] A not None, double[:] B not None, float tolerance=0.):
 def trapz(double[:] Y not None, double[:] X not None):
     """
     A trapz integration routine optimized for doubles
-    
+     
     Args:
         Y (np.ndarray): a 1D double array with y coordinates
         X (np.ndarray): a 1D double array with x coordinates
@@ -649,3 +658,124 @@ cdef double _trapz_contiguous(double *Y, double *X, int size):
         x0 = x1 
         y0 = y1
     return total
+
+cdef int _argmax1d(double[:] xs):
+    """
+    Like argmax but only for 1D double arrays
+    """
+    cdef size_t i
+    cdef size_t idx = 0
+    cdef double m = xs[0]
+    cdef double x
+    for i in range(1, xs.shape[0]):
+        x = xs[i]
+        if x > m:
+            m = x
+            idx = i
+    return idx
+
+
+cdef int _argmax1d_row(double[:, ::1] xs, int row):
+    cdef size_t i
+    cdef size_t idx = 0
+    cdef double m = xs[row, 0]
+    cdef double x
+    for i in range(1, xs.shape[1]):
+        x = xs[row, i]
+        if x > m:
+            m = x
+            idx = i
+    return idx
+
+
+
+def argmax1d(double[:] xs):
+    """
+    Like argmax but only for 1D double arrays
+    """
+    cdef size_t i
+    cdef size_t idx = 0
+    cdef double m = xs[0]
+    cdef double x
+    for i in range(xs.shape[0]):
+        x = xs[i]
+        if x > m:
+            m = x
+            idx = i
+    return idx
+
+
+def viterbi_core(double[:, ::1] log_prob, double[:, ::1] log_trans, double[::1] log_p_init):
+    """Core Viterbi algorithm.
+
+    This is intended for internal use only.
+
+    Parameters
+    ----------
+    log_prob : np.ndarray [shape=(T, m)]
+        ``log_prob[t, s]`` is the conditional log-likelihood
+        ``log P[X = X(t) | State(t) = s]``
+    log_trans : np.ndarray [shape=(m, m)]
+        The log transition matrix
+        ``log_trans[i, j] = log P[State(t+1) = j | State(t) = i]``
+    log_p_init : np.ndarray [shape=(m,)]
+        log of the initial state distribution
+
+    Returns
+    -------
+    None
+        All computations are performed in-place on ``state, value, ptr``.
+    """
+    cdef int n_steps = log_prob.shape[0]
+    cdef int n_states = log_prob.shape[1]
+    # n_steps, n_states = log_prob.shape
+
+    # cdef np.ndarray[np.uint64_t, ndim=1] state = np.zeros(n_steps, dtype=np.uint64)
+    cdef np.uint64_t[::1] state = np.zeros(n_steps, dtype=np.uint64)
+    cdef double[:, ::1] value = np.zeros((n_steps, n_states), dtype=np.float64)
+    cdef np.uint64_t[:, ::1] ptr = np.zeros((n_steps, n_states), dtype=np.uint64)
+    cdef np.ndarray log_trans_T = log_trans.T
+    cdef size_t t, j, col, i0, j0
+    cdef double[:, ::1] trans_out = np.zeros_like(log_trans.T, dtype=np.float64)
+    
+
+    # factor in initial state distribution
+    # value[0] = log_prob[0] + log_p_init
+    for j in range(log_p_init.shape[0]):
+        value[0, j] = log_prob[0, j] + log_p_init[j]
+
+    for t in range(1, n_steps):
+        # Want V[t, j] <- p[t, j] * max_k V[t-1, k] * A[k, j]
+        #    assume at time t-1 we were in state k
+        #    transition k -> j
+
+        # Broadcast over rows:
+        #    Tout[k, j] = V[t-1, k] * A[k, j]
+        #    then take the max over columns
+        # We'll do this in log-space for stability
+
+
+        # trans_out = value[t - 1] + log_trans_T
+        for i0 in range(log_trans_T.shape[0]):
+            for j0 in range(log_trans_T.shape[1]):
+                trans_out[i0, j0] = log_trans_T[i0, j0] + value[t-1, j0]
+        
+        for j in range(n_states):
+            # ptr[t, j] = np.argmax(trans_out[j])
+            ptr[t, j] = _argmax1d_row(trans_out, j)
+            # value[t, j] = log_prob[t, j] + trans_out[j, ptr[t, j]]
+            col = ptr[t, j]
+            value[t, j] = log_prob[t, j] + trans_out[j, col]
+            
+    # Now roll backward
+
+    # Get the last state
+    # state[-1] = np.argmax(value[-1])
+    state[-1] = _argmax1d(value[-1])
+
+    for t in range(n_steps - 2, -1, -1):
+        state[t] = ptr[t + 1, state[t + 1]]
+
+    logp = value[-1:, state[-1]]
+
+    return state, logp
