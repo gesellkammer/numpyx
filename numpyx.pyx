@@ -692,6 +692,12 @@ cdef int _argmax1d_row(double[:, ::1] xs, int row):
 def argmax1d(double[:] xs):
     """
     Like argmax but only for 1D double arrays
+
+    Args:
+        xs (ndarray): a 1D double array
+
+    Returns:
+        the index of the highest element in xs
     """
     cdef size_t i
     cdef size_t idx = 0
@@ -706,25 +712,22 @@ def argmax1d(double[:] xs):
 
 
 def viterbi_core(double[:, ::1] log_prob, double[:, ::1] log_trans, double[::1] log_p_init):
-    """Core Viterbi algorithm.
+    """
+    Core Viterbi algorithm.
 
-    This is intended for internal use only.
+    Used internally by algorithms like pyin to perform
+    viderbi decoding 
 
-    Parameters
-    ----------
-    log_prob : np.ndarray [shape=(T, m)]
-        ``log_prob[t, s]`` is the conditional log-likelihood
-        ``log P[X = X(t) | State(t) = s]``
-    log_trans : np.ndarray [shape=(m, m)]
-        The log transition matrix
-        ``log_trans[i, j] = log P[State(t+1) = j | State(t) = i]``
-    log_p_init : np.ndarray [shape=(m,)]
-        log of the initial state distribution
+    Args:
+        log_prob (np.ndarray [shape=(T, m)]): ``log_prob[t, s]`` is the conditional 
+            log-likelihood ``log P[X = X(t) | State(t) = s]``
+        log_trans (np.ndarray [shape=(m, m)]): The log transition matrix
+            ``log_trans[i, j] = log P[State(t+1) = j | State(t) = i]``
+        log_p_init (np.ndarray [shape=(m,)]): log of the initial state distribution
 
-    Returns
-    -------
-    None
-        All computations are performed in-place on ``state, value, ptr``.
+    Returns:
+        state, logp
+    
     """
     cdef int n_steps = log_prob.shape[0]
     cdef int n_states = log_prob.shape[1]
@@ -758,7 +761,7 @@ def viterbi_core(double[:, ::1] log_prob, double[:, ::1] log_trans, double[::1] 
         # trans_out = value[t - 1] + log_trans_T
         for i0 in range(log_trans_T.shape[0]):
             for j0 in range(log_trans_T.shape[1]):
-                trans_out[i0, j0] = log_trans_T[i0, j0] + value[t-1, j0]
+                trans_out[i0, j0]s = log_trans_T[i0, j0] + value[t-1, j0]
         
         for j in range(n_states):
             # ptr[t, j] = np.argmax(trans_out[j])
