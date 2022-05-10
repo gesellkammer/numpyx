@@ -761,7 +761,7 @@ def viterbi_core(double[:, ::1] log_prob, double[:, ::1] log_trans, double[::1] 
         # trans_out = value[t - 1] + log_trans_T
         for i0 in range(log_trans_T.shape[0]):
             for j0 in range(log_trans_T.shape[1]):
-                trans_out[i0, j0]s = log_trans_T[i0, j0] + value[t-1, j0]
+                trans_out[i0, j0] = log_trans_T[i0, j0] + value[t-1, j0]
         
         for j in range(n_states):
             # ptr[t, j] = np.argmax(trans_out[j])
