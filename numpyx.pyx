@@ -10,7 +10,7 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-from libc.math cimport INFINITY, fabs
+from libc.math cimport INFINITY, fabs, ceil
 from libc cimport stdint
 
 
@@ -709,6 +709,18 @@ def argmax1d(double[:] xs):
             m = x
             idx = i
     return idx
+
+
+def aranged(double start, double stop, double step):
+    cdef size_t i = 0
+    cdef int numitems = int((stop - start) / step)
+    cdef double x
+    # cdef double[::1] out = np.empty((numitems,), dtype=np.double)
+    cdef np.ndarray[double, ndim=1] out = np.empty((numitems,), dtype=np.double)
+    for i in range(numitems):
+        out[i] = start + i * step
+    return np.asarray(out)
+
 
 
 def viterbi_core(double[:, ::1] log_prob, double[:, ::1] log_trans, double[::1] log_p_init):
