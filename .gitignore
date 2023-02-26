@@ -4,6 +4,7 @@ dist
 *.c
 *.html
 *.so
+*.o
 MANIFEST
 wheelhouse
 site
