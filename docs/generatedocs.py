@@ -18,7 +18,6 @@ def main(destfolder: str):
     dest = Path(destfolder)
     reference = doctools.generateDocsForModule(numpyx, 
                                                renderConfig=renderConfig, 
-                                               exclude={'MidiBase'},
                                                title="Reference")
     open(dest / "reference.md", "w").write(reference)
     
