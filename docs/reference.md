@@ -4,6 +4,31 @@
 ---------
 
 
+| Function  | Description  |
+| :-------  | :----------- |
+| `allequal` | Check if all elements in A == to its corresponding element in B |
+| `any_equal_to` | Is any value of a == scalar? |
+| `any_greater_or_equal_than` | Is any value of a >= scalar? |
+| `any_greater_than` | Is any value of a > scalar? |
+| `any_less_or_equal_than` | Is any value of a <= scalar? |
+| `any_less_than` | Is any value in a < scalar? |
+| `aranged` | aranged(double start, double stop, double step) |
+| `argmax1d` | Like argmax but only for 1D double arrays |
+| `array_is_sorted` | Is the array sorted? |
+| `minmax1d` | Calculate min. and max. of a double 1D-array in one pass |
+| `nearestidx` | Return the index of the element in A which is nearest to x |
+| `nearestitem` | For each value in V, return the element in A which is nearest |
+| `searchsorted1` | Like searchsorted, but optimized for 1D double arrays |
+| `searchsorted2` | Like searchsorted, but for 2D arrays |
+| `table_interpol_linear` | Interpolate between rows of a 2D matrix |
+| `trapz` | A trapz integration routine optimized for doubles |
+| `viterbi_core` | Core Viterbi algorithm. |
+| `weightedavg` | Weighted average of a time-series |
+
+
+---------
+
+
 ## allequal
 
 
