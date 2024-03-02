@@ -243,11 +243,11 @@ def searchsorted1(a, v, out=None):
         raise TypeError(f"v: expected numpy array or float, got {type(v)}")
 
 
-cdef int _searchsorted1(double[:] A, double x) nogil: 
+cdef int _searchsorted1(double[:] A, double x, int imin=0, int imax=0) nogil: 
     cdef:
-        int imin = 0
-        int imax = A.shape[0]
         int imid
+    if imax == 0:
+    	imax = A.shape[0]
     while imin < imax:
         imid = imin + ((imax - imin) / 2)
         if A[imid] < x:
@@ -448,6 +448,41 @@ def nearestidx(double[:] A not None, double x, bint sorted=False):
             return idx
         return idx + 1
     
+
+def nearestitemsorted(double[:] A not None, double[:] V not None):
+	"""
+	Similar to nearestitem, but assumed that both A and V are sorted
+
+	Args:
+		A: 1D double array, the values to choose from
+		V: 1D double array, the values to snap to A. It should be sorted
+
+	Returns:
+		an array of the same shape as V with values of A
+	"""
+    cdef double[:] O = np.empty((Vsize,), dtype=np.double)
+    cdef int i, idx, minidx = 0
+    cdef int N = V.shape[0]
+    cdef double v, a0, a1
+    cdef double lastv = V[0]
+    for i in range(N):
+        v = V[i]
+        if v < lastv:
+            raise ValueError("Items in V are not sorted")
+        lastv = v
+        idx = _searchsorted1(A, v, minidx)
+        minidx = max(0, idx - 1)
+        if idx >= N - 1:
+            O[i] = A[N-1]
+        else:
+            a0 = A[idx]
+            a1 = A[idx+1]
+            if abs(a0 - v) < abs(a1 - v):
+                O[i] = a0
+            else:
+                O[i] = a1
+    	
+
 
 def nearestitem(double[:] A not None, double[:] V not None, out=None):
     """
