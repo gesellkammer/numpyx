@@ -36,7 +36,7 @@ def any_less_than(double[:] a not None, double scalar):
                 break
     return bool(out)
 
-    
+
 def any_less_or_equal_than(double[:] a not None, double scalar):
     """
     Is any value of a <= scalar?
@@ -94,7 +94,7 @@ def any_greater_or_equal_than(double[:] a not None, double scalar):
 
     Returns:
         (bool) True if any value in a >= scalar
-    
+
     """
     cdef int size = a.shape[0]
     cdef size_t i
@@ -121,7 +121,7 @@ def any_equal_to(double[:] a not None, double scalar,  double tolerance=0):
 
     Returns:
         (bool) True if any value in a == scalar
-    
+
     """
     cdef int size = a.shape[0]
     cdef size_t i
@@ -170,7 +170,7 @@ def minmax1d(double[:] a not None):
 def array_is_sorted(double [:]xs, bint allowduplicates=True):
     """
     Is the array sorted?
-    
+
     Args:
         xs (np.ndarray): a numpy float array
         allowduplicates (bool): if true (default), duplicate values are still
@@ -200,7 +200,7 @@ def array_is_sorted(double [:]xs, bint allowduplicates=True):
     return bool(out)
 
 
-cdef inline void _interpol(double[:, :] table, int idx, double delta, double[:, ::1] out, 
+cdef inline int _interpol(double[:, :] table, int idx, double delta, double[:, ::1] out,
                            int outidx, int numcols) nogil:
     cdef:
         int i
@@ -210,12 +210,14 @@ cdef inline void _interpol(double[:, :] table, int idx, double delta, double[:, 
         y1 = table[idx+1, i]
         y = y0 + (y1 - y0) * delta
         out[outidx, i - 1] = y
+    return 0
 
-cdef inline void _putrow(double[:, ::1] out, int outidx, double[:, :] table, int tableidx) nogil:
+cdef inline int _putrow(double[:, ::1] out, int outidx, double[:, :] table, int tableidx) nogil:
     cdef int i
     cdef int out_numcols = out.shape[1]
     for i in range(1, table.shape[1]):
         out[outidx, i-1] = table[tableidx, i]
+    return 0
 
 
 def searchsorted1(a, v, out=None):
@@ -226,10 +228,10 @@ def searchsorted1(a, v, out=None):
         a (np.ndarray): array to be searched
         v (float | np.ndarray): value/values to "insert" in a
         out: if v is a numpy array, an array `out` can be passed
-             which will hold the result. 
+             which will hold the result.
 
     Returns:
-        (float | np.ndarray) If v is a scalar, returns an integer, 
+        (float | np.ndarray) If v is a scalar, returns an integer,
         otherwise an array with the same shape as `v`
     """
     if isinstance(v, np.ndarray):
@@ -243,11 +245,11 @@ def searchsorted1(a, v, out=None):
         raise TypeError(f"v: expected numpy array or float, got {type(v)}")
 
 
-cdef int _searchsorted1(double[:] A, double x, int imin=0, int imax=0) nogil: 
+cdef inline int _searchsorted1(double[:] A, double x, int imin=0, int imax=0) nogil:
     cdef:
         int imid
     if imax == 0:
-    	imax = A.shape[0]
+        imax = A.shape[0]
     while imin < imax:
         imid = imin + ((imax - imin) / 2)
         if A[imid] < x:
@@ -257,15 +259,15 @@ cdef int _searchsorted1(double[:] A, double x, int imin=0, int imax=0) nogil:
     return imin
 
 
-cdef void _searchsorted1x(double[:] A, double[:] V, long[:] out) nogil:
+cdef inline int _searchsorted1x(double[:] A, double[:] V, long[:] out) nogil:
     cdef:
         int imin = 0
         int imaxidx = A.shape[0]
         int imid
         int i
         double x
-    for i in range(imaxidx):
-        imin = 0 
+    for i in range(V.shape[0]):
+        imin = 0
         imax = imaxidx
         x = V[i]
         while imin < imax:
@@ -274,10 +276,11 @@ cdef void _searchsorted1x(double[:] A, double[:] V, long[:] out) nogil:
                 imin = imin + 1
             else:
                 imax = imid
-        out[i] = imin 
-    
+        out[i] = imin
+    return 0
 
-cdef int _searchsorted2(double[:, :] xs, int col, double x) nogil:    
+
+cdef int _searchsorted2(double[:, :] xs, int col, double x) nogil:
     cdef:
         int imin = 0
         int imax = xs.shape[0]
@@ -317,7 +320,7 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
     at possibly irregular X, `table_interpol_linear` will interpolate between
     adjacent rows of `table` for each value of `xs`. `xs` contains the x values at which
     to interpolate rows of `table`
-    
+
     Args:
         table (np.ndarray): a 2D array where each row has the form [x_i, a, b, c, ...]. The first
             value of the row is the x coordinate (or time-stamp) and the rest of the
@@ -326,10 +329,10 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
             a whole row of values will be generated from adjacent rows in `table`
 
     Returns:
-        (np.ndarray) An array with the interpolated rows. The result will have as many 
+        (np.ndarray) An array with the interpolated rows. The result will have as many
         rows as `xs`, and one column less than the columns of `table`
-        
-    
+
+
     Example
     -------
 
@@ -345,7 +348,7 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
            [2.,  0., 4.,  8., 12., 16.]])
     ```
 
-    The resampled table has no `x` column, which would be a 
+    The resampled table has no `x` column, which would be a
     copy of the sampling points `xs`, and thus has one column
     less than the table. To build a table with the given xs as
     first column, do:
@@ -357,7 +360,7 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
     """
     cdef:
         double[:, ::1] out = np.empty((xs.shape[0], table.shape[1] - 1))
-        int idx 
+        int idx
         int lastidx = 0
         int table_numrows = table.shape[0]
         int table_numcols = table.shape[1]
@@ -413,10 +416,10 @@ def table_interpol_linear(double[:, ::1] table, double[:] xs):
 def nearestidx(double[:] A not None, double x, bint sorted=False):
     """
     Return the index of the element in A which is nearest to x
-    
+
     Args:
         A (np.ndarray): the array to query (1D double array)
-        x (np.ndarray): the value to search the nearest item 
+        x (np.ndarray): the value to search the nearest item
         sorted (bool): True if A is sorted
 
     Returns:
@@ -427,9 +430,10 @@ def nearestidx(double[:] A not None, double x, bint sorted=False):
         raise ValueError("array is empty")
     elif size == 1:
         return 0
-    cdef double smallest = INFINITY
-    cdef int idx = 0
-    cdef double diff
+    cdef:
+        double smallest = INFINITY
+        int idx = 0
+        double diff
     if not sorted:
         for i in range(size):
             diff = abs(A[i] - x)
@@ -447,20 +451,20 @@ def nearestidx(double[:] A not None, double x, bint sorted=False):
         if abs(A[idx] - x) < abs(A[idx+1] -x):
             return idx
         return idx + 1
-    
 
-def nearestitemsorted(double[:] A not None, double[:] V not None):
-	"""
-	Similar to nearestitem, but assumed that both A and V are sorted
 
-	Args:
-		A: 1D double array, the values to choose from
-		V: 1D double array, the values to snap to A. It should be sorted
+def nearestitemsorted(double[::1] A not None, double[:] V not None):
+    """
+    Similar to nearestitem, but assumed that both A and V are sorted
 
-	Returns:
-		an array of the same shape as V with values of A
-	"""
-    cdef double[:] O = np.empty((Vsize,), dtype=np.double)
+    Args:
+        A: 1D double array, the values to choose from
+        V: 1D double array, the values to snap to A. It should be sorted
+
+    Returns:
+        an array of the same shape as V with values of A
+    """
+    cdef double[::1] O = np.empty((V.shape[0],), dtype=np.double)
     cdef int i, idx, minidx = 0
     cdef int N = V.shape[0]
     cdef double v, a0, a1
@@ -474,14 +478,17 @@ def nearestitemsorted(double[:] A not None, double[:] V not None):
         minidx = max(0, idx - 1)
         if idx >= N - 1:
             O[i] = A[N-1]
+        elif idx == 0:
+            O[i] = A[0]
         else:
-            a0 = A[idx]
-            a1 = A[idx+1]
+            a0 = A[idx-1]
+            a1 = A[idx]
             if abs(a0 - v) < abs(a1 - v):
                 O[i] = a0
             else:
                 O[i] = a1
-    	
+    return np.asarray(O)
+
 
 
 def nearestitem(double[:] A not None, double[:] V not None, out=None):
@@ -492,11 +499,11 @@ def nearestitem(double[:] A not None, double[:] V not None, out=None):
     Args:
         A (np.ndarray): a 1D double array. The values to choose from
         V (np.ndarray): a 1D double array. The values to snap to A
-        out (np.ndarray | None): if given, the values selected from A will 
+        out (np.ndarray | None): if given, the values selected from A will
             be put here. It can't be A itself, but could be V
 
     Returns:
-        (np.ndarray) An array of the same shape as V with values of A, each of 
+        (np.ndarray) An array of the same shape as V with values of A, each of
         each is the nearest value of A to each value of B
 
     Example
@@ -514,7 +521,7 @@ def nearestitem(double[:] A not None, double[:] V not None, out=None):
     cdef long[:] Idxs = np.searchsorted(A, V)
     cdef int i, idx
     cdef double a0, a1, v
-    cdef double[:] O 
+    cdef double[:] O
     cdef int Vsize = V.shape[0]
     cdef int maxidx = A.shape[0] - 1
     if out is not None:
@@ -560,7 +567,7 @@ def weightedavg(double[:] Y not None, double [:] X not None, double[:] weights n
     >>> amps  = np.array([0.1,  0.3,  0.2])
     >>> weightedavg(freqs, times, amps)
     442.6667
-    
+
     ```
     """
     if Y.is_c_contig() and X.is_c_contig() and weights.is_c_contig():
@@ -585,7 +592,7 @@ cdef double _weightedavg(double[:] Y, double[:] X, double[:] weights):
         wavg = (w0 + w1) * 0.5 * dx
         accum += yavg * wavg
         accumw += wavg
-        x0 = x1 
+        x0 = x1
         y0 = y1
         w0 = w1
     return accum / accumw
@@ -608,7 +615,7 @@ cdef double _weightedavg_contiguous(double* Y, double* X, double* weights, int s
         wavg = (w0 + w1) * 0.5 * dx
         accum += yavg * wavg
         accumw += wavg
-        x0 = x1 
+        x0 = x1
         y0 = y1
         w0 = w1
     return accum / accumw
@@ -619,12 +626,12 @@ def allequal(double[:] A not None, double[:] B not None, float tolerance=0.):
     Check if all elements in A == to its corresponding element in B
 
     Exits early if any inequality is found.
-    
+
     Args:
         A (np.ndarray): a 1D double array
         B (np.ndarray): a 1D double array
         tolerance (float): The tolerance to considere two values equal
-        
+
     Returns:
         (bool) True if all items in A are equal to their corresponding items in B
     """
@@ -648,7 +655,7 @@ def allequal(double[:] A not None, double[:] B not None, float tolerance=0.):
 def trapz(double[:] Y not None, double[:] X not None):
     """
     A trapz integration routine optimized for doubles
-     
+
     Args:
         Y (np.ndarray): a 1D double array with y coordinates
         X (np.ndarray): a 1D double array with x coordinates
@@ -673,7 +680,7 @@ cdef double _trapz(double[:] Y, double[:] X):
         dx = x1 - x0
         area = (y0 + y1) * 0.5 * dx
         total += area
-        x0 = x1 
+        x0 = x1
         y0 = y1
     return total
 
@@ -690,7 +697,7 @@ cdef double _trapz_contiguous(double *Y, double *X, int size):
         dx = x1 - x0
         area = (y0 + y1) * 0.5 * dx
         total += area
-        x0 = x1 
+        x0 = x1
         y0 = y1
     return total
 
@@ -721,7 +728,6 @@ cdef int _argmax1d_row(double[:, ::1] xs, int row):
             m = x
             idx = i
     return idx
-
 
 
 def argmax1d(double[:] xs):
@@ -757,75 +763,3 @@ def aranged(double start, double stop, double step):
     return np.asarray(out)
 
 
-
-def viterbi_core(double[:, ::1] log_prob, double[:, ::1] log_trans, double[::1] log_p_init):
-    """
-    Core Viterbi algorithm.
-
-    Used internally by algorithms like pyin to perform
-    viderbi decoding 
-
-    Args:
-        log_prob (np.ndarray [shape=(T, m)]): ``log_prob[t, s]`` is the conditional 
-            log-likelihood ``log P[X = X(t) | State(t) = s]``
-        log_trans (np.ndarray [shape=(m, m)]): The log transition matrix
-            ``log_trans[i, j] = log P[State(t+1) = j | State(t) = i]``
-        log_p_init (np.ndarray [shape=(m,)]): log of the initial state distribution
-
-    Returns:
-        state, logp
-    
-    """
-    cdef int n_steps = log_prob.shape[0]
-    cdef int n_states = log_prob.shape[1]
-    # n_steps, n_states = log_prob.shape
-
-    # cdef np.ndarray[np.uint64_t, ndim=1] state = np.zeros(n_steps, dtype=np.uint64)
-    cdef np.uint64_t[::1] state = np.zeros(n_steps, dtype=np.uint64)
-    cdef double[:, ::1] value = np.zeros((n_steps, n_states), dtype=np.float64)
-    cdef np.uint64_t[:, ::1] ptr = np.zeros((n_steps, n_states), dtype=np.uint64)
-    cdef np.ndarray log_trans_T = log_trans.T
-    cdef size_t t, j, col, i0, j0
-    cdef double[:, ::1] trans_out = np.zeros_like(log_trans.T, dtype=np.float64)
-    
-
-    # factor in initial state distribution
-    # value[0] = log_prob[0] + log_p_init
-    for j in range(log_p_init.shape[0]):
-        value[0, j] = log_prob[0, j] + log_p_init[j]
-
-    for t in range(1, n_steps):
-        # Want V[t, j] <- p[t, j] * max_k V[t-1, k] * A[k, j]
-        #    assume at time t-1 we were in state k
-        #    transition k -> j
-
-        # Broadcast over rows:
-        #    Tout[k, j] = V[t-1, k] * A[k, j]
-        #    then take the max over columns
-        # We'll do this in log-space for stability
-
-
-        # trans_out = value[t - 1] + log_trans_T
-        for i0 in range(log_trans_T.shape[0]):
-            for j0 in range(log_trans_T.shape[1]):
-                trans_out[i0, j0] = log_trans_T[i0, j0] + value[t-1, j0]
-        
-        for j in range(n_states):
-            # ptr[t, j] = np.argmax(trans_out[j])
-            ptr[t, j] = _argmax1d_row(trans_out, j)
-            # value[t, j] = log_prob[t, j] + trans_out[j, ptr[t, j]]
-            col = ptr[t, j]
-            value[t, j] = log_prob[t, j] + trans_out[j, col]
-            
-    # Now roll backward
-
-    # Get the last state
-    # state[-1] = np.argmax(value[-1])
-    state[-1] = _argmax1d(value[-1])
-
-    for t in range(n_steps - 2, -1, -1):
-        state[t] = ptr[t + 1, state[t + 1]]
-
-    logp = value[-1:, state[-1]]
-
-    return state, logp
