@@ -38,12 +38,11 @@ jobs:
 
       - name: Upload wheels
         env:
-            TWINE_USERNAME: Eduardo.Moguillansky
-            TWINE_PASSWORD: ${{ secrets.pypipass }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TWINETOKEN }}
         run: |
             echo $TWINE_USERNAME
             echo $TWINE_PASSWORD
             python -m pip install -U twine virtualenv
             twine upload --skip-existing wheelhouse/*.whl
         continue-on-error: true
-  
