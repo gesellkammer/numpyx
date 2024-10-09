@@ -17,7 +17,7 @@ setup(
     name = "numpyx",
     python_requires=">=3.8",
     setup_requires=['cython', 
-                    'numpy>=1.22'],
+                    'numpy>=2.0'],
     install_requires = ["numpy>=1.22"],
     ext_modules=[
         Extension(
