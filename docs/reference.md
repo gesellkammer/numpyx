@@ -18,12 +18,13 @@
 | `minmax1d` | Calculate min. and max. of a double 1D-array in one pass |
 | `nearestidx` | Return the index of the element in A which is nearest to x |
 | `nearestitem` | For each value in V, return the element in A which is nearest |
+| `nearestitemsorted` | Similar to nearestitem, but assumed that both A and V are sorted |
 | `searchsorted1` | Like searchsorted, but optimized for 1D double arrays |
 | `searchsorted2` | Like searchsorted, but for 2D arrays |
 | `table_interpol_linear` | Interpolate between rows of a 2D matrix |
 | `trapz` | A trapz integration routine optimized for doubles |
-| `viterbi_core` | Core Viterbi algorithm. |
 | `weightedavg` | Weighted average of a time-series |
+
 
 
 ---------
@@ -376,6 +377,33 @@ array([1., 1., 3., 5.])
 ---------
 
 
+## nearestitemsorted
+
+
+```python
+
+nearestitemsorted(double[::1] A, double[:] V)
+
+```
+
+
+Similar to nearestitem, but assumed that both A and V are sorted
+
+
+
+**Args**
+
+* **A**: 1D double array, the values to choose from
+* **V**: 1D double array, the values to snap to A. It should be sorted
+
+**Returns**
+
+&nbsp;&nbsp;&nbsp;&nbsp;an array of the same shape as V with values of A
+
+
+---------
+
+
 ## searchsorted1
 
 
@@ -395,7 +423,7 @@ Like searchsorted, but optimized for 1D double arrays
 * **a** (`np.ndarray`): array to be searched
 * **v** (`float | np.ndarray`): value/values to "insert" in a
 * **out**: if v is a numpy array, an array `out` can be passed          which
-    will hold the result.  (*default*: `None`)
+    will hold the result. (*default*: `None`)
 
 **Returns**
 
@@ -469,7 +497,7 @@ array([[0.5, 0., 1.5, 3., 4.5, 6. ]
        [2.,  0., 4.,  8., 12., 16.]])
 ```
 
-The resampled table has no `x` column, which would be a 
+The resampled table has no `x` column, which would be a
 copy of the sampling points `xs`, and thus has one column
 less than the table. To build a table with the given xs as
 first column, do:
@@ -521,41 +549,6 @@ A trapz integration routine optimized for doubles
 **Returns**
 
 &nbsp;&nbsp;&nbsp;&nbsp;(`float`) The surface beneath the curve defined by the points X, Y
-
-
----------
-
-
-## viterbi\_core
-
-
-```python
-
-viterbi_core(double[:, ::1] log_prob, double[:, ::1] log_trans, double[::1] log_p_init)
-
-```
-
-
-Core Viterbi algorithm.
-
-
-Used internally by algorithms like pyin to perform
-viderbi decoding 
-
-
-
-**Args**
-
-* **log_prob** (`np.ndarray [shape=(T, m)]`): ``log_prob[t, s]`` is the
-    conditional         log-likelihood ``log P[X = X(t) | State(t) = s]``
-* **log_trans** (`np.ndarray [shape=(m, m)]`): The log transition matrix
-    ``log_trans[i, j] = log P[State(t+1) = j | State(t) = i]``
-* **log_p_init** (`np.ndarray [shape=(m,)]`): log of the initial state
-    distribution
-
-**Returns**
-
-&nbsp;&nbsp;&nbsp;&nbsp;state, logp
 
 
 ---------
