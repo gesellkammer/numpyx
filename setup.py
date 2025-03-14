@@ -1,7 +1,7 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "1.4.2"
+VERSION = "1.4.3"
 
 class numpy_get_include(str):
     def __str__(self):
@@ -27,7 +27,7 @@ setup(
         )
     ],
     package_data = {'numpyx': ['numpyx.pyi', 'py.typed']},
-
+    packages=['numpyx'],
     version          = VERSION,
     url              = 'https://github.com/gesellkammer/numpyx',
     download_url     = 'https://github.com/gesellkammer/numpyx',
