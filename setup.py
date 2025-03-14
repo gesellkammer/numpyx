@@ -21,11 +21,12 @@ setup(
     install_requires = ["numpy>=1.22"],
     ext_modules=[
         Extension(
-            'numpyx',
-            sources=['numpyx.pyx'],
+            'numpyx.numpyx',
+            sources=['numpyx/numpyx.pyx'],
             include_dirs=[numpy_get_include()]
         )
     ],
+    package_data = {'numpyx': ['numpyx.pyi', 'py.typed']},
 
     version          = VERSION,
     url              = 'https://github.com/gesellkammer/numpyx',
