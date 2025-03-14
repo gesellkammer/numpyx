@@ -1,7 +1,7 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "1.4.1"
+VERSION = "1.4.2"
 
 class numpy_get_include(str):
     def __str__(self):
@@ -15,10 +15,10 @@ with open(os.path.join(thisdir, 'README.rst')) as f:
     
 setup(
     name = "numpyx",
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     setup_requires=['cython', 
                     'numpy>=2.0'],
-    install_requires = ["numpy>=1.22"],
+    install_requires = ["numpy>=2"],
     ext_modules=[
         Extension(
             'numpyx.numpyx',
