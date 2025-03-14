@@ -8,10 +8,15 @@
 #cython: cdivision=True
 
 import numpy as np
-cimport numpy as np
+cimport numpy as cnp
 cimport cython
-from libc.math cimport INFINITY, fabs, ceil
+from libc.math cimport INFINITY, fabs, ceil, exp
 from libc cimport stdint
+
+
+cdef inline cnp.ndarray EMPTY1D(int size): #new_empty_doublearray_1D(int size):
+    cdef cnp.npy_intp *dims = [size]
+    return cnp.PyArray_EMPTY(1, dims, cnp.NPY_DOUBLE, 0)
 
 
 def any_less_than(double[:] a not None, double scalar):
@@ -142,6 +147,20 @@ def any_equal_to(double[:] a not None, double scalar,  double tolerance=0):
     return bool(out)
 
 
+cdef inline double _minmax1d_contig(double *ptr, size_t size, double *minval) nogil:
+    cdef double x0 = INFINITY
+    cdef double x1 = -INFINITY
+    cdef double x
+    for i in range(size):
+        x = ptr[i]
+        if x < x0:
+            x0 = x
+        elif x > x1:
+            x1 = x
+    minval[0] = x0
+    return x1
+
+
 def minmax1d(double[:] a not None):
     """
     Calculate min. and max. of a double 1D-array in one pass
@@ -157,17 +176,22 @@ def minmax1d(double[:] a not None):
     cdef double x0 = INFINITY
     cdef double x1 = -INFINITY
     cdef double x
-    with nogil:
-        for i in range(size):
-            x = a[i]
-            if x < x0:
-                x0 = x
-            elif x > x1:
-                x1 = x
+
+    if a.is_c_contig():
+        x1 = _minmax1d_contig(&a[0], size, &x0)
+    else:
+        with nogil:
+            for i in range(size):
+                x = a[i]
+                if x < x0:
+                    x0 = x
+                elif x > x1:
+                    x1 = x
     return x0, x1
 
 
-def array_is_sorted(double [:]xs, bint allowduplicates=True):
+
+def array_is_sorted(double [:]xs not None, bint allowduplicates=True):
     """
     Is the array sorted?
 
@@ -756,10 +780,38 @@ def aranged(double start, double stop, double step):
     cdef size_t i = 0
     cdef int numitems = int((stop - start) / step)
     cdef double x
-    # cdef double[::1] out = np.empty((numitems,), dtype=np.double)
-    cdef np.ndarray[double, ndim=1] out = np.empty((numitems,), dtype=np.double)
+    cdef double[::1] out = EMPTY1D(numitems)  # np.empty((numitems,), dtype=np.double)
     for i in range(numitems):
         out[i] = start + i * step
     return np.asarray(out)
 
 
+def amp_follow(double[:] samples not None, int sr, float attack=0.01, float release=0.01, int chunksize=256):
+    """
+    Envelope follower
+
+    Args:
+        samples: the samples to follow (1d array, does not need to be contiguous)
+        attack: attack time in seconds
+        release: release time in seconds
+        chunksize: size of the chunks to process
+
+    Returns:
+        the envelope and the envelope follower
+
+    """
+    cdef int numitems = samples.shape[0]
+    cdef double[::1] out = EMPTY1D(numitems)  # np.empty((numitems,), dtype=np.double)
+    envelope = 0.
+    ga = exp(-6.90775527898 / (sr * attack))
+    gr = exp(-6.90775527898 / (sr * release))
+    cdef int i
+    cdef double x
+    for i in range(numitems):
+        x = fabs(samples[i])
+        if envelope < x:
+            envelope = x + ga * (envelope - x)
+        else:
+            envelope = x + gr * (envelope - x)
+        out[i] = envelope
+    return np.asarray(out)
