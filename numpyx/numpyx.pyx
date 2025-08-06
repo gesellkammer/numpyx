@@ -103,11 +103,102 @@ def any_greater_or_equal_than(double[:] a not None, double scalar):
     """
     cdef int size = a.shape[0]
     cdef size_t i
-    cdef double x
     cdef int out = 0
     with nogil:
         for i in range(size):
             if a[i] >= scalar:
+                out = 1
+                break
+    return bool(out)
+
+
+def int64_any_greater_or_equal_than(long[:] a not None, int scalar):
+    """
+    Is any value of a >= scalar?
+
+    Args:
+        a (np.ndarray): a 1D int64 array
+        scalar (int): the scalar to compare to
+
+    Returns:
+        (bool) True if any value in a >= scalar
+
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] >= scalar:
+                out = 1
+                break
+    return bool(out)
+
+
+def int64_any_equal_to(long[:] a not None, int scalar):
+    """
+    Is any value of a == scalar?
+
+    Args:
+        a (np.ndarray): a 1D int64 array
+        scalar (int): the scalar to compare to
+
+    Returns:
+        (bool) True if any value in a >= scalar
+
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] == scalar:
+                out = 1
+                break
+    return bool(out)
+
+
+def int64_any_less_than(long[:] a not None, int scalar):
+    """
+    Is any value of a < scalar?
+
+    Args:
+        a (np.ndarray): a 1D int64 array
+        scalar (int): the scalar to compare to
+
+    Returns:
+        (bool) True if any value in a >= scalar
+
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] < scalar:
+                out = 1
+                break
+    return bool(out)
+
+
+def int64_any_greater_than(long[:] a not None, int scalar):
+    """
+    Is any value of a > scalar?
+
+    Args:
+        a (np.ndarray): a 1D int64 array
+        scalar (int): the scalar to compare to
+
+    Returns:
+        (bool) True if any value in a >= scalar
+
+    """
+    cdef int size = a.shape[0]
+    cdef size_t i
+    cdef int out = 0
+    with nogil:
+        for i in range(size):
+            if a[i] > scalar:
                 out = 1
                 break
     return bool(out)
