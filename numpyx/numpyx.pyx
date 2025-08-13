@@ -112,7 +112,7 @@ def any_greater_or_equal_than(double[:] a not None, double scalar):
     return bool(out)
 
 
-def int64_any_greater_or_equal_than(long[:] a not None, int scalar):
+def int64_any_greater_or_equal(long[:] a not None, int scalar):
     """
     Is any value of a >= scalar?
 
