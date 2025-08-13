@@ -1,7 +1,7 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "1.5.1"
+VERSION = "1.5.2"
 
 class numpy_get_include(str):
     def __str__(self):
