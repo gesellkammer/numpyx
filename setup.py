@@ -37,7 +37,6 @@ setup(
     long_description = long_description,
     license="GPL v3",
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
