@@ -1,22 +1,22 @@
 from setuptools import setup, Extension
 import os
 
-VERSION = "1.5.2"
+VERSION = "1.6.0"
 
 class numpy_get_include(str):
     def __str__(self):
         import numpy
         return numpy.get_include()
-        
+
 # read the contents of your README file
 thisdir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(thisdir, 'README.rst')) as f:
     long_description = f.read()
-    
+
 setup(
     name = "numpyx",
     python_requires=">=3.9",
-    setup_requires=['cython', 
+    setup_requires=['cython',
                     'numpy>=2.0'],
     install_requires = ["numpy>=2"],
     ext_modules=[

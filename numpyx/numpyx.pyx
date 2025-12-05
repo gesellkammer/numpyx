@@ -281,7 +281,6 @@ def minmax1d(double[:] a not None):
     return x0, x1
 
 
-
 def array_is_sorted(double [:]xs not None, bint allowduplicates=True):
     """
     Is the array sorted?
@@ -568,6 +567,46 @@ def nearestidx(double[:] A not None, double x, bint sorted=False):
         return idx + 1
 
 
+def nearestindexes(double[::1] A not None, double[:] V not None):
+    """
+    Similar to nearestitem, returns the index of A nearest to V
+
+    Args:
+        A: 1D double array, the array to search. It should be sorted
+        V: 1D double array, the array to snap to A. It should be sorted
+
+    Returns:
+        an array of the same shape as V with values of A
+    """
+    cdef int[::1] O = np.empty((V.shape[0],), dtype=np.int32)
+    cdef int i, idx, minidx = 0
+    cdef int N = V.shape[0]
+    cdef double v, a0, a1
+    cdef double lastv = V[0]
+    cdef int lastidx = A.shape[0] - 1
+    cdef double v0, v1
+    for i in range(N):
+        v = V[i]
+        if v < lastv:
+            raise ValueError("Items in V are not sorted")
+        lastv = v
+        idx = _searchsorted1(A, v, minidx)
+        minidx = max(0, idx - 1)
+        if idx > lastidx:
+            O[i] = lastidx
+        elif idx == 0:
+            O[i] = 0
+        else:
+            a0 = A[idx-1]
+            a1 = A[idx]
+            O[i] = idx - <int>(v - a0 < a1 - v)
+            #if v - a0 < a1 - v:
+            #    O[i] = idx - 1
+            #else:
+            #    O[i] = idx
+    return np.asarray(O)
+
+
 def nearestitemsorted(double[::1] A not None, double[:] V not None):
     """
     Similar to nearestitem, but assumed that both A and V are sorted
@@ -603,7 +642,6 @@ def nearestitemsorted(double[::1] A not None, double[:] V not None):
             else:
                 O[i] = a1
     return np.asarray(O)
-
 
 
 def nearestitem(double[:] A not None, double[:] V not None, out=None):
